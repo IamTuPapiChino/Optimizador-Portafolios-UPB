@@ -22,7 +22,6 @@ Asset Pricing Model (CAPM).
 ========================================================================
 El repositorio se encuentra estructurado de la siguiente manera:
 
-* /.venv            : Entorno virtual de Python aislado.
 * /codigo/app.py    : Archivo principal que contiene la arquitectura del sistema.
 * /datos            : Repositorio para almacenar archivos Excel/CSV de Refinitiv.
 * requirements.txt  : Manifiesto de dependencias y librerías necesarias.
