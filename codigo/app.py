@@ -25,7 +25,7 @@ except ImportError:
 # CONFIGURACIÓN DE LA PÁGINA
 # ============================================
 st.set_page_config(
-    page_title="Herramienta de Visualización Financiera | Finanzas I",
+    page_title="Herramienta de Optimización Financiera | Finanzas I",
     page_icon="📈",
     layout="wide",
     initial_sidebar_state="expanded"
