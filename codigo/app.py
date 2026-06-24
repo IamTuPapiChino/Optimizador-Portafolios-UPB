@@ -92,6 +92,9 @@ frecuencia_sel = st.sidebar.selectbox(
 )
 ann_factor = freq_opciones[frecuencia_sel]
 
+intervalo_yf = {"Diaria (252)": "1d", "Semanal (52)": "1wk", "Mensual (12)": "1mo", "Anual (1)": "1y"}
+intervalo_seleccionado = intervalo_yf[frecuencia_sel]
+
 # ============================================
 # MOTOR DE DESCARGA GLOBAL Y FUNCIONES
 # ============================================
@@ -161,7 +164,7 @@ with tab1:
         with col1:
             start_date = st.date_input("Fecha de inicio", value=date(2020, 1, 1), key="date_start_m1")
         with col2:
-            end_date = st.date_input("Fecha de fin", value=date(2026, 6, 18), key="date_end_m1")
+            end_date = st.date_input("Fecha de fin", value=date.today(), key="date_end_m1")
         
         use_max_period = st.checkbox("Usar el período máximo histórico disponible", value=False, key="chk_maxper_m1")
 
@@ -175,9 +178,9 @@ with tab1:
                     try:
                         end_date_yf = end_date + timedelta(days=1)
                         if use_max_period:
-                            raw_data = yf.download(tickers_list, period="max", auto_adjust=True, progress=False)
+                            raw_data = yf.download(tickers_list, period="max", interval=intervalo_seleccionado, auto_adjust=True, progress=False)
                         else:
-                            raw_data = yf.download(tickers_list, start=start_date, end=end_date_yf, auto_adjust=True, progress=False)
+                            raw_data = yf.download(tickers_list, start=start_date, end=end_date_yf, interval=intervalo_seleccionado, auto_adjust=True, progress=False)
                         
                         if isinstance(raw_data.columns, pd.MultiIndex):
                             prices_data = raw_data['Close']
@@ -286,6 +289,10 @@ with tab1:
         st.divider()
         st.subheader("2. Filtro de Período de Análisis")
 
+        if prices_full.empty or pd.isna(prices_full.index.min()):
+            st.error("No se detectaron registros válidos en la base de datos para este intervalo. Se requiere seleccionar una frecuencia menor (Mensual o Diaria) o ampliar el rango de fechas.")
+            st.stop()
+
         min_date = prices_full.index.min().date()
         max_date = prices_full.index.max().date()
 
@@ -327,7 +334,12 @@ with tab1:
                 st.warning("Es mandatorio seleccionar al menos un instrumento financiero.")
             else:
                 prices_selected = prices[selected_assets]
-                returns = prices_selected.pct_change().dropna()
+                prices_selected = prices_selected.dropna(axis=1, how='all')
+                returns = prices_selected.pct_change().dropna() 
+                if len(returns) == 0:
+                    st.error("Error crítico:No existe un período de tiempo superpuesto con datos válidos para TODOS los activos seleccionados. Verifica que no haya tickers inválidos o activos que no cotizaban en estas fechas.")
+                    st.stop() 
+                
                 
                 rf_rate_m1 = get_dynamic_rf(prices_selected)
                 if usar_ticker_rf:
@@ -1870,4 +1882,4 @@ if FPDF is not None:
 # PIE DE PÁGINA
 # ============================================
 st.divider()
-st.caption("Trabajo Final Integrador | Finanzas I | UPB La Paz - 2026")
+st.caption("Trabajo Final | Finanzas I | UPB La Paz - 2026")
