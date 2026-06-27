@@ -352,12 +352,22 @@ with tab1:
 
                 st.subheader("5. Métricas de Riesgo y Rentabilidad (Anualizadas)")
 
+                # --- 1. Cálculos de retorno y riesgo estándar ---
                 arithmetic_return = (1 + returns.mean()) ** ann_factor - 1
-                geo_return = (prices_selected.iloc[-1] / prices_selected.iloc[0]) ** (ann_factor / len(returns)) - 1
                 annual_vol = returns.std() * np.sqrt(ann_factor)
                 sharpe_ratio = (arithmetic_return - rf_rate_m1) / annual_vol
 
+                # --- 2. Cálculos Acumulativos (Solución a los datos nulos de Yahoo Finance) ---
+                # Se calcula primero la serie acumulada limpia
                 cumulative = (1 + returns).cumprod()
+                
+                # El retorno geométrico ahora usa la serie acumulada, evitando los precios crudos
+                geo_return = (cumulative.iloc[-1]) ** (ann_factor / len(returns)) - 1
+                
+                # El precio actual usa ffill() para buscar el último precio válido transado
+                precio_actual = prices_selected.ffill().iloc[-1]
+
+                # --- 3. Drawdown y Sortino ---
                 running_max = cumulative.cummax()
                 drawdown = (cumulative - running_max) / running_max
                 max_drawdown = drawdown.min()
@@ -366,6 +376,8 @@ with tab1:
                 downside_std = downside_returns.std() * np.sqrt(ann_factor)
                 sortino_ratio = (arithmetic_return - rf_rate_m1) / downside_std
 
+                # --- 4. Construcción de la Tabla ---
+                # Usamos returns.columns como índice para garantizar que solo se listen los activos válidos
                 summary = pd.DataFrame({
                     'Retorno Anualizado Aritmético (%)': (arithmetic_return * 100).round(2),
                     'Retorno Anualizado Geométrico (%)': (geo_return * 100).round(2),
@@ -373,8 +385,8 @@ with tab1:
                     'Ratio de Sharpe': sharpe_ratio.round(3),
                     'Ratio de Sortino': sortino_ratio.round(3),
                     'Maximum Drawdown (%)': (max_drawdown * 100).round(2),
-                    'Precio Actual': prices_selected.iloc[-1].round(2)
-                }, index=selected_assets)
+                    'Precio Actual': precio_actual.round(2)
+                }, index=returns.columns)
 
                 st.dataframe(summary, use_container_width=True)
                 st.caption(f"**Base Metodológica:** Anualización sustentada en un factor temporal de {ann_factor} períodos.")
