@@ -334,12 +334,20 @@ with tab1:
                 st.warning("Es mandatorio seleccionar al menos un instrumento financiero.")
             else:
                 prices_selected = prices[selected_assets]
-                prices_selected = prices_selected.dropna(axis=1, how='all')
-                returns = prices_selected.pct_change().dropna() 
-                if len(returns) == 0:
-                    st.error("Error crítico:No existe un período de tiempo superpuesto con datos válidos para TODOS los activos seleccionados. Verifica que no haya tickers inválidos o activos que no cotizaban en estas fechas.")
-                    st.stop() 
                 
+                # 1. Rellenar datos faltantes (None/NaN) con el último precio válido (Forward Fill)
+                prices_selected = prices_selected.ffill()
+                
+                # 2. Eliminar activos que son 100% nulos (tickers inválidos o sin datos)
+                prices_selected = prices_selected.dropna(axis=1, how='all')
+                
+                # 3. Calcular retornos y eliminar filas con vacíos temporales restantes
+                returns = prices_selected.pct_change().dropna()
+                
+                # 4. Validación de seguridad definitiva
+                if len(returns) == 0:
+                    st.error("Error crítico: No existe un período de tiempo superpuesto con datos válidos para TODOS los activos seleccionados.")
+                    st.stop()
                 
                 rf_rate_m1 = get_dynamic_rf(prices_selected)
                 if usar_ticker_rf:
@@ -489,8 +497,17 @@ with tab1:
 
                 st.subheader("8. Relación Riesgo-Rentabilidad Sectorial")
                 
-                summary_with_sector = summary.reset_index().rename(columns={'index': 'Activo'})
+                # --- SOLUCIÓN DE MERGE ---
+                # 1. Copiamos el dataframe y forzamos matemáticamente el nombre del índice
+                summary_with_sector = summary.copy()
+                summary_with_sector.index.name = 'Activo'
+                
+                # 2. Reseteamos el índice (ahora la nueva columna se llamará obligatoriamente 'Activo')
+                summary_with_sector = summary_with_sector.reset_index()
+                
+                # 3. Realizamos la fusión de tablas (merge) con total seguridad
                 summary_with_sector = summary_with_sector.merge(edited_sectors, on='Activo', how='left')
+                # -------------------------
 
                 fig_scatter = px.scatter(
                     summary_with_sector,
