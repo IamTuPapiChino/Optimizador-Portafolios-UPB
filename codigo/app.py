@@ -977,18 +977,30 @@ with tab2:
             * Proporción en Portafolio Riesgoso (Tangente): **{(y_opt * 100):.2f}%**
             """)
 
+            # --- NUEVA TABLA DE DESGLOSE EFECTIVO ---
             comp_weights = w_ms * y_opt
-            comp_weights_df = pd.DataFrame({
-                'Activo': selected_assets_m2 + [f"Activo Libre de Riesgo"],
-                'Peso en Cartera Completa (%)': np.append(comp_weights * 100, weight_rf * 100).round(2)
+            
+            df_desglose = pd.DataFrame({
+                'Activo': selected_assets_m2,
+                'Peso en Portafolio Riesgoso (%)': (w_ms * 100).round(2),
+                'Peso Efectivo en Cartera Total (%)': (comp_weights * 100).round(2)
             })
+            
+            df_rf = pd.DataFrame({
+                'Activo': ['Activo Libre de Riesgo'],
+                'Peso en Portafolio Riesgoso (%)': [0.00],
+                'Peso Efectivo en Cartera Total (%)': [(weight_rf * 100).round(2)]
+            })
+            
+            comp_weights_df = pd.concat([df_desglose, df_rf], ignore_index=True)
 
             col_ct1, col_ct2 = st.columns([1, 2])
             with col_ct1:
-                st.dataframe(comp_weights_df, use_container_width=True, hide_index=True)
+                # Filtramos para no mostrar activos con 0% de peso
+                df_mostrar = comp_weights_df[comp_weights_df['Peso Efectivo en Cartera Total (%)'] != 0]
+                st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
             with col_ct2:
-                df_pie_comp = comp_weights_df[comp_weights_df['Peso en Cartera Completa (%)'] > 0]
-                fig_pie_comp = px.pie(df_pie_comp, values='Peso en Cartera Completa (%)', names='Activo', title='Distribución (Posiciones en Largo)', hole=0.3)
+                fig_pie_comp = px.pie(df_mostrar, values='Peso Efectivo en Cartera Total (%)', names='Activo', title='Distribución (Posiciones en Largo)', hole=0.3)
                 fig_pie_comp.update_traces(textposition='inside', textinfo='percent+label')
                 st.plotly_chart(fig_pie_comp, use_container_width=True, key="pie_comp_m2")
 
@@ -1003,6 +1015,27 @@ with tab2:
                 'Máximo Sharpe (%)': (w_ms * 100).round(2),
                 'Equiponderado (%)': (w_ew * 100).round(2)
             })
+
+            # --- NUEVO CONTADOR DE CONCENTRACIÓN DE ACTIVOS ---
+            umbral_peso = 0.01
+            total_activos = len(selected_assets_m2)
+            
+            conteo_min_var = (weights_df['Mínima Varianza (%)'] > umbral_peso).sum()
+            conteo_sharpe = (weights_df['Máximo Sharpe (%)'] > umbral_peso).sum()
+            conteo_ew = (weights_df['Equiponderado (%)'] > umbral_peso).sum()
+
+            st.markdown("**Nivel de Concentración de Portafolios**")
+            col_c1, col_c2, col_c3 = st.columns(3)
+            with col_c1:
+                st.metric(label="Activos en Mínima Varianza", value=f"{conteo_min_var} / {total_activos}")
+            with col_c2:
+                st.metric(label="Activos en Máximo Sharpe", value=f"{conteo_sharpe} / {total_activos}")
+            with col_c3:
+                st.metric(label="Activos en Equiponderado", value=f"{conteo_ew} / {total_activos}")
+            
+            st.caption("Nota: Solo se contabilizan posiciones con una asignación superior al 0.01%.")
+            st.write("") # Espaciador
+            # --------------------------------------------------
 
             st.dataframe(weights_df, use_container_width=True, hide_index=True)
 
