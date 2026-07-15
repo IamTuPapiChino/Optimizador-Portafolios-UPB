@@ -1707,23 +1707,24 @@ if FPDF is not None:
         # ============================================
         # 3 y 4. ORDEN: Composición de la Cartera Completa y Riesgosa (Tabla + Donas)
         # ============================================
-        if pdf.get_y() > 185:
+        # Se asegura suficiente espacio vertical para el bloque completo
+        if pdf.get_y() > 140:
             pdf.add_page()
             
         pdf.agregar_subtitulo('Composición de la Cartera Completa y Riesgosa (Posiciones Activas)')
         
-        start_y_comp = pdf.get_y()
-        
-        # Renderizado de la tabla doble (Lado Izquierdo)
+        # --- 1. TABLA EN LA PARTE SUPERIOR ---
+        # Centrado de la tabla (Ancho total = 130mm. Margen izquierdo = 40mm)
+        margin_x = 40
         pdf.set_fill_color(0, 32, 96)
         pdf.set_text_color(255, 255, 255)
-        pdf.set_font('Arial', 'B', 8.5)
-        pdf.set_x(15)
-        pdf.cell(40, 7, pdf.clean_text('Activo / Instrumento'), 1, 0, 'L', True)
-        pdf.cell(26, 7, pdf.clean_text('P. Riesgoso (%)'), 1, 0, 'C', True)
-        pdf.cell(26, 7, pdf.clean_text('P. Total (%)'), 1, 1, 'C', True)
+        pdf.set_font('Arial', 'B', 9)
+        pdf.set_x(margin_x)
+        pdf.cell(60, 7, pdf.clean_text('Activo / Instrumento'), 1, 0, 'C', True)
+        pdf.cell(35, 7, pdf.clean_text('P. Riesgoso (%)'), 1, 0, 'C', True)
+        pdf.cell(35, 7, pdf.clean_text('P. Total (%)'), 1, 1, 'C', True)
         
-        pdf.set_font('Arial', '', 8.5)
+        pdf.set_font('Arial', '', 9)
         pdf.set_text_color(30, 30, 30)
         fill_toggle_comp = False
         
@@ -1736,10 +1737,10 @@ if FPDF is not None:
                     pdf.set_fill_color(245, 247, 250)
                 else:
                     pdf.set_fill_color(255, 255, 255)
-                pdf.set_x(15)
-                pdf.cell(40, 6, pdf.clean_text(asset), 1, 0, 'L', True)
-                pdf.cell(26, 6, pdf.clean_text(f"{w_riesgo:.2f}%"), 1, 0, 'C', True)
-                pdf.cell(26, 6, pdf.clean_text(f"{w_total:.2f}%"), 1, 1, 'C', True)
+                pdf.set_x(margin_x)
+                pdf.cell(60, 6, pdf.clean_text(asset), 1, 0, 'C', True)
+                pdf.cell(35, 6, pdf.clean_text(f"{w_riesgo:.2f}%"), 1, 0, 'C', True)
+                pdf.cell(35, 6, pdf.clean_text(f"{w_total:.2f}%"), 1, 1, 'C', True)
                 fill_toggle_comp = not fill_toggle_comp
                 
         w_rf_comp = weight_rf_pdf * 100
@@ -1748,14 +1749,18 @@ if FPDF is not None:
                 pdf.set_fill_color(245, 247, 250)
             else:
                 pdf.set_fill_color(255, 255, 255)
-            pdf.set_x(15)
-            pdf.cell(40, 6, pdf.clean_text('Activo Libre de Riesgo'), 1, 0, 'L', True)
-            pdf.cell(26, 6, pdf.clean_text("0.00%"), 1, 0, 'C', True)
-            pdf.cell(26, 6, pdf.clean_text(f"{w_rf_comp:.2f}%"), 1, 1, 'C', True)
+            pdf.set_x(margin_x)
+            pdf.cell(60, 6, pdf.clean_text('Activo Libre de Riesgo'), 1, 0, 'C', True)
+            pdf.cell(35, 6, pdf.clean_text("0.00%"), 1, 0, 'C', True)
+            pdf.cell(35, 6, pdf.clean_text(f"{w_rf_comp:.2f}%"), 1, 1, 'C', True)
             
-        end_y_table = pdf.get_y()
+        pdf.ln(8)
         
-        # Renderizado de Gráficos de Dona Duales (Lado Derecho)
+        # --- 2. GRÁFICOS DE DONA EN LA PARTE INFERIOR ---
+        # Validación de espacio para evitar que los gráficos se corten
+        if pdf.get_y() > 210:
+            pdf.add_page()
+            
         try:
             # Consolidación de datos: Cartera Total
             labels_total = []
@@ -1778,16 +1783,16 @@ if FPDF is not None:
                     labels_riesgo.append(asset)
                     sizes_riesgo.append(w_val_r)
                     
-            # Configuración de subplots (1 fila, 2 columnas)
-            fig_pie, (ax1, ax2) = plt.subplots(1, 2, figsize=(5.0, 2.6))
+            # Se incrementa el tamaño de la figura para mayor legibilidad
+            fig_pie, (ax1, ax2) = plt.subplots(1, 2, figsize=(8.0, 3.5))
             
             ax1.pie(sizes_total, labels=labels_total, autopct='%1.1f%%', startangle=90, 
-                    textprops=dict(color="black", size=5.5), wedgeprops=dict(width=0.4, edgecolor='white'))
-            ax1.set_title('Cartera Total', fontsize=7.5, fontweight='bold', color='#002060')
+                    textprops=dict(color="black", size=8), wedgeprops=dict(width=0.4, edgecolor='white'))
+            ax1.set_title('Cartera Total', fontsize=10, fontweight='bold', color='#002060')
             
             ax2.pie(sizes_riesgo, labels=labels_riesgo, autopct='%1.1f%%', startangle=90, 
-                    textprops=dict(color="black", size=5.5), wedgeprops=dict(width=0.4, edgecolor='white'))
-            ax2.set_title('100% Riesgoso', fontsize=7.5, fontweight='bold', color='#002060')
+                    textprops=dict(color="black", size=8), wedgeprops=dict(width=0.4, edgecolor='white'))
+            ax2.set_title('100% Riesgoso', fontsize=10, fontweight='bold', color='#002060')
             
             plt.tight_layout()
             
@@ -1796,17 +1801,14 @@ if FPDF is not None:
                 pie_path = tmp_pie.name
             plt.close(fig_pie)
             
-            # Inserción en el PDF ajustando dimensiones y coordenadas
-            pdf.image(pie_path, x=108, y=start_y_comp, w=95)
-            end_y_chart = start_y_comp + 55
+            # Inserción centrada en el PDF con un ancho de 160mm
+            pdf.image(pie_path, x=25, y=pdf.get_y(), w=160)
+            pdf.set_y(pdf.get_y() + 75)
             os.unlink(pie_path)
         except Exception as e:
-            end_y_chart = start_y_comp
-            pdf.set_x(110)
-            pdf.set_y(start_y_comp)
-            pdf.cell(0, 6, pdf.clean_text(f"[Gráficos omitidos por error: {e}]"), 0, 1, 'L')
+            pdf.cell(0, 6, pdf.clean_text(f"[Gráficos omitidos por error: {e}]"), 0, 1, 'C')
             
-        pdf.set_y(max(end_y_table, end_y_chart) + 6)
+        pdf.ln(6)
 
         # ============================================
         # SECCIÓN III: MODELO CAPM Y VALUACIÓN DE ACTIVOS
