@@ -1704,36 +1704,42 @@ if FPDF is not None:
         
         pdf.ln(4)
 
-        # 3 y 4. ORDEN: Composición de la Cartera Completa (Posiciones Activas) + Dona en paralelo
+        # ============================================
+        # 3 y 4. ORDEN: Composición de la Cartera Completa y Riesgosa (Tabla + Donas)
+        # ============================================
         if pdf.get_y() > 185:
             pdf.add_page()
             
-        pdf.agregar_subtitulo('Composición de la Cartera Completa (Posiciones Activas)')
+        pdf.agregar_subtitulo('Composición de la Cartera Completa y Riesgosa (Posiciones Activas)')
         
         start_y_comp = pdf.get_y()
         
-        # Renderizado de la tabla de Cartera Completa (Lado Izquierdo)
+        # Renderizado de la tabla doble (Lado Izquierdo)
         pdf.set_fill_color(0, 32, 96)
         pdf.set_text_color(255, 255, 255)
-        pdf.set_font('Arial', 'B', 9)
+        pdf.set_font('Arial', 'B', 8.5)
         pdf.set_x(15)
-        pdf.cell(55, 7, pdf.clean_text('Activo / Instrumento'), 1, 0, 'L', True)
-        pdf.cell(30, 7, pdf.clean_text('Peso (%)'), 1, 1, 'C', True)
+        pdf.cell(40, 7, pdf.clean_text('Activo / Instrumento'), 1, 0, 'L', True)
+        pdf.cell(26, 7, pdf.clean_text('P. Riesgoso (%)'), 1, 0, 'C', True)
+        pdf.cell(26, 7, pdf.clean_text('P. Total (%)'), 1, 1, 'C', True)
         
-        pdf.set_font('Arial', '', 9)
+        pdf.set_font('Arial', '', 8.5)
         pdf.set_text_color(30, 30, 30)
         fill_toggle_comp = False
         
         for idx, asset in enumerate(selected_assets):
-            w_asset_comp = comp_weights_pdf[idx] * 100
-            if abs(w_asset_comp) >= 0.01:
+            w_riesgo = w_ms_pdf[idx] * 100
+            w_total = comp_weights_pdf[idx] * 100
+            
+            if abs(w_riesgo) >= 0.01 or abs(w_total) >= 0.01:
                 if fill_toggle_comp:
                     pdf.set_fill_color(245, 247, 250)
                 else:
                     pdf.set_fill_color(255, 255, 255)
                 pdf.set_x(15)
-                pdf.cell(55, 6, pdf.clean_text(asset), 1, 0, 'L', True)
-                pdf.cell(30, 6, pdf.clean_text(f"{w_asset_comp:.2f}%"), 1, 1, 'C', True)
+                pdf.cell(40, 6, pdf.clean_text(asset), 1, 0, 'L', True)
+                pdf.cell(26, 6, pdf.clean_text(f"{w_riesgo:.2f}%"), 1, 0, 'C', True)
+                pdf.cell(26, 6, pdf.clean_text(f"{w_total:.2f}%"), 1, 1, 'C', True)
                 fill_toggle_comp = not fill_toggle_comp
                 
         w_rf_comp = weight_rf_pdf * 100
@@ -1743,49 +1749,62 @@ if FPDF is not None:
             else:
                 pdf.set_fill_color(255, 255, 255)
             pdf.set_x(15)
-            pdf.cell(55, 6, pdf.clean_text('Activo Libre de Riesgo'), 1, 0, 'L', True)
-            pdf.cell(30, 6, pdf.clean_text(f"{w_rf_comp:.2f}%"), 1, 1, 'C', True)
+            pdf.cell(40, 6, pdf.clean_text('Activo Libre de Riesgo'), 1, 0, 'L', True)
+            pdf.cell(26, 6, pdf.clean_text("0.00%"), 1, 0, 'C', True)
+            pdf.cell(26, 6, pdf.clean_text(f"{w_rf_comp:.2f}%"), 1, 1, 'C', True)
             
         end_y_table = pdf.get_y()
         
-        # Renderizado del Gráfico de Dona de Cartera Completa (Lado Derecho)
+        # Renderizado de Gráficos de Dona Duales (Lado Derecho)
         try:
-            labels_pie = []
-            sizes_pie = []
+            # Consolidación de datos: Cartera Total
+            labels_total = []
+            sizes_total = []
             for idx, asset in enumerate(selected_assets):
                 w_val = comp_weights_pdf[idx] * 100
                 if w_val >= 0.01:
-                    labels_pie.append(asset)
-                    sizes_pie.append(w_val)
+                    labels_total.append(asset)
+                    sizes_total.append(w_val)
             if weight_rf_pdf * 100 >= 0.01:
-                labels_pie.append('Activo L.R.')
-                sizes_pie.append(weight_rf_pdf * 100)
+                labels_total.append('Activo L.R.')
+                sizes_total.append(weight_rf_pdf * 100)
                 
-            fig_pie, ax_pie = plt.subplots(figsize=(3.2, 2.7))
-            wedges, texts, autotexts = ax_pie.pie(
-                sizes_pie, 
-                labels=labels_pie, 
-                autopct='%1.1f%%', 
-                startangle=90,
-                textprops=dict(color="black", size=7),
-                wedgeprops=dict(width=0.4, edgecolor='white')
-            )
-            ax_pie.set_title('Distribución (Posiciones en Largo)', fontsize=8.5, fontweight='bold', color='#002060')
+            # Consolidación de datos: Portafolio 100% Riesgoso
+            labels_riesgo = []
+            sizes_riesgo = []
+            for idx, asset in enumerate(selected_assets):
+                w_val_r = w_ms_pdf[idx] * 100
+                if w_val_r >= 0.01:
+                    labels_riesgo.append(asset)
+                    sizes_riesgo.append(w_val_r)
+                    
+            # Configuración de subplots (1 fila, 2 columnas)
+            fig_pie, (ax1, ax2) = plt.subplots(1, 2, figsize=(5.0, 2.6))
+            
+            ax1.pie(sizes_total, labels=labels_total, autopct='%1.1f%%', startangle=90, 
+                    textprops=dict(color="black", size=5.5), wedgeprops=dict(width=0.4, edgecolor='white'))
+            ax1.set_title('Cartera Total', fontsize=7.5, fontweight='bold', color='#002060')
+            
+            ax2.pie(sizes_riesgo, labels=labels_riesgo, autopct='%1.1f%%', startangle=90, 
+                    textprops=dict(color="black", size=5.5), wedgeprops=dict(width=0.4, edgecolor='white'))
+            ax2.set_title('100% Riesgoso', fontsize=7.5, fontweight='bold', color='#002060')
+            
             plt.tight_layout()
             
             with tempfile.NamedTemporaryFile(delete=False, suffix='.png') as tmp_pie:
-                plt.savefig(tmp_pie.name, dpi=300)
+                plt.savefig(tmp_pie.name, dpi=300, transparent=True)
                 pie_path = tmp_pie.name
             plt.close(fig_pie)
             
-            pdf.image(pie_path, x=110, y=start_y_comp, w=85)
-            end_y_chart = start_y_comp + 74
+            # Inserción en el PDF ajustando dimensiones y coordenadas
+            pdf.image(pie_path, x=108, y=start_y_comp, w=95)
+            end_y_chart = start_y_comp + 55
             os.unlink(pie_path)
         except Exception as e:
             end_y_chart = start_y_comp
             pdf.set_x(110)
             pdf.set_y(start_y_comp)
-            pdf.cell(0, 6, pdf.clean_text(f"[Gráfico omitido por error: {e}]"), 0, 1, 'L')
+            pdf.cell(0, 6, pdf.clean_text(f"[Gráficos omitidos por error: {e}]"), 0, 1, 'L')
             
         pdf.set_y(max(end_y_table, end_y_chart) + 6)
 
