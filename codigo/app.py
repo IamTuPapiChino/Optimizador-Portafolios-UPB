@@ -1001,10 +1001,21 @@ with tab2:
                 df_mostrar = comp_weights_df[comp_weights_df['Peso Efectivo en Cartera Total (%)'] != 0]
                 st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
             with col_ct2:
-                fig_pie_comp = px.pie(df_mostrar, values='Peso Efectivo en Cartera Total (%)', names='Activo', title='Distribución (Posiciones en Largo)', hole=0.3)
-                # Corrección: textposition se ajusta a 'auto'
-                fig_pie_comp.update_traces(textposition='auto', textinfo='percent+label')
-                st.plotly_chart(fig_pie_comp, use_container_width=True, key="pie_comp_m2")
+                # Creación de subpestañas para separar las visualizaciones
+                tab_total, tab_riesgoso = st.tabs(["Cartera Total", "Portafolio 100% Riesgoso"])
+                
+                with tab_total:
+                    fig_pie_comp = px.pie(df_mostrar, values='Peso Efectivo en Cartera Total (%)', names='Activo', title='Distribución con Activo Libre de Riesgo', hole=0.3)
+                    fig_pie_comp.update_traces(textposition='auto', textinfo='percent+label')
+                    st.plotly_chart(fig_pie_comp, use_container_width=True, key="pie_comp_total_m2")
+                    
+                with tab_riesgoso:
+                    # Se filtra el Activo Libre de Riesgo para dejar solo el portafolio 100% riesgoso
+                    df_riesgoso = df_mostrar[df_mostrar['Activo'] != 'Activo Libre de Riesgo']
+                    fig_pie_riesgo = px.pie(df_riesgoso, values='Peso en Portafolio Riesgoso (%)', names='Activo', title='Distribución del Portafolio 100% Riesgoso', hole=0.3)
+                    fig_pie_riesgo.update_traces(textposition='auto', textinfo='percent+label')
+                    fig_pie_riesgo.update_traces(marker=dict(colors=px.colors.qualitative.Plotly))
+                    st.plotly_chart(fig_pie_riesgo, use_container_width=True, key="pie_comp_riesgo_m2")
 
             # ============================================
             # 9. DISTRIBUCIÓN TRANSVERSAL
