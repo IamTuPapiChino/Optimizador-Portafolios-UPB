@@ -989,19 +989,21 @@ with tab2:
             df_rf = pd.DataFrame({
                 'Activo': ['Activo Libre de Riesgo'],
                 'Peso en Portafolio Riesgoso (%)': [0.00],
-                'Peso Efectivo en Cartera Total (%)': [(weight_rf * 100).round(2)]
+                # Corrección: Se utiliza la función round() nativa de Python
+                'Peso Efectivo en Cartera Total (%)': [round(weight_rf * 100, 2)]
             })
             
             comp_weights_df = pd.concat([df_desglose, df_rf], ignore_index=True)
 
             col_ct1, col_ct2 = st.columns([1, 2])
             with col_ct1:
-                # Filtramos para no mostrar activos con 0% de peso
+                # Se filtran los activos con 0% de peso
                 df_mostrar = comp_weights_df[comp_weights_df['Peso Efectivo en Cartera Total (%)'] != 0]
                 st.dataframe(df_mostrar, use_container_width=True, hide_index=True)
             with col_ct2:
                 fig_pie_comp = px.pie(df_mostrar, values='Peso Efectivo en Cartera Total (%)', names='Activo', title='Distribución (Posiciones en Largo)', hole=0.3)
-                fig_pie_comp.update_traces(textposition='inside', textinfo='percent+label')
+                # Corrección: textposition se ajusta a 'auto'
+                fig_pie_comp.update_traces(textposition='auto', textinfo='percent+label')
                 st.plotly_chart(fig_pie_comp, use_container_width=True, key="pie_comp_m2")
 
             # ============================================
